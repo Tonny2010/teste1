@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Ping Pong</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- TELA INICIAL -->
+  <div id="start-screen">
+    <h1>Ping Pong</h1>
+
+    <div id="menu">
+      <label>
+        <input type="radio" name="mode" value="single" checked>
+        Single Player
+      </label>
+
+      <label>
+        <input type="radio" name="mode" value="two">
+        Two Players
+      </label>
+
+      <button id="start-btn">Start</button>
+    </div>
+  </div>
+
+  <!-- ÁREA DO JOGO -->
+  <div id="game-screen" style="display:none; flex-direction:column; align-items:center;">
+    
+    <div id="scoreboard" style="
+      width: 600px; 
+      display: flex; 
+      justify-content: space-between; 
+      font-size: 28px; 
+      margin-bottom: 10px;
+    ">
+      <span id="score-left">0</span>
+      <span id="score-right">0</span>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="400" tabindex="0"></canvas>
+
+    <button id="back-btn" style="
+      margin-top: 20px;
+      padding: 10px 20px;
+      background:#444;
+      color:#fff;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+    ">
+      Voltar ao início
+    </button>
+
+  </div>
+
+
+<script>
+const startScreen = document.getElementById("start-screen");
+const gameScreen = document.getElementById("game-screen");
+const startBtn = document.getElementById("start-btn");
+const backBtn = document.getElementById("back-btn");
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let mode = "single";
+let ball, leftPaddle, rightPaddle;
+let leftScore = 0;
+let rightScore = 0;
+let keys = {};
+
+document.querySelectorAll("input[name='mode']").forEach(r => {
+  r.addEventListener("change", e => mode = e.target.value);
+});
+
+startBtn.addEventListener("click", startGame);
+backBtn.addEventListener("click", backToMenu);
+
+canvas.addEventListener("keydown", e => keys[e.key] = true);
+canvas.addEventListener("keyup", e => keys[e.key] = false);
+
+function backToMenu() {
+  cancelAnimationFrame(loopId);
+  gameScreen.style.display = "none";
+  startScreen.style.display = "flex";
+
+  leftScore = 0;
+  rightScore = 0;
+  updateScore();
+}
+
+function startGame() {
+  startScreen.style.display = "none";
+  gameScreen.style.display = "flex";
+  canvas.focus();
+
+  resetObjects();
+  loop();
+}
+
+function resetObjects() {
+  ball = { x:300, y:200, size:10, dx:4, dy:4 };
+
+  leftPaddle = { x:20, y:150, w:10, h:80, speed:6 };
+  rightPaddle = { x:570, y:150, w:10, h:80, speed:6 };
+}
+
+function updateScore() {
+  document.getElementById("score-left").textContent = leftScore;
+  document.getElementById("score-right").textContent = rightScore;
+}
+
+function movePaddles() {
+  // Left paddle (Player 1)
+  if (keys["w"]) leftPaddle.y -= leftPaddle.speed;
+  if (keys["s"]) leftPaddle.y += leftPaddle.speed;
+
+  // Right paddle
+  if (mode === "two") {
+    if (keys["ArrowUp"]) rightPaddle.y -= rightPaddle.speed;
+    if (keys["ArrowDown"]) rightPaddle.y += rightPaddle.speed;
+  } else {
+    // IA simples
+    if (ball.y < rightPaddle.y + rightPaddle.h/2) rightPaddle.y -= 4;
+    if (ball.y > rightPaddle.y + rightPaddle.h/2) rightPaddle.y += 4;
+  }
+
+  // Limites
+  leftPaddle.y = Math.max(0, Math.min(320, leftPaddle.y));
+  rightPaddle.y = Math.max(0, Math.min(320, rightPaddle.y));
+}
+
+function moveBall() {
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  // colisão vertical
+  if (ball.y <= 0 || ball.y >= 390) ball.dy *= -1;
+
+  // colisão com paddles
+  if (
+    ball.x <= leftPaddle.x + leftPaddle.w &&
+    ball.y >= leftPaddle.y &&
+    ball.y <= leftPaddle.y + leftPaddle.h
+  ) ball.dx *= -1;
+
+  if (
+    ball.x + ball.size >= rightPaddle.x &&
+    ball.y >= rightPaddle.y &&
+    ball.y <= rightPaddle.y + rightPaddle.h
+  ) ball.dx *= -1;
+
+  // ponto
+  if (ball.x < 0) {
+    rightScore++;
+    updateScore();
+    resetObjects();
+  }
+  if (ball.x > 600) {
+    leftScore++;
+    updateScore();
+    resetObjects();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0,0,600,400);
+
+  // ball
+  ctx.fillStyle = "white";
+  ctx.fillRect(ball.x, ball.y, ball.size, ball.size);
+
+  // paddles
+  ctx.fillRect(leftPaddle.x, leftPaddle.y, leftPaddle.w, leftPaddle.h);
+  ctx.fillRect(rightPaddle.x, rightPaddle.y, rightPaddle.w, rightPaddle.h);
+}
+
+let loopId;
+function loop() {
+  movePaddles();
+  moveBall();
+  draw();
+  loopId = requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
